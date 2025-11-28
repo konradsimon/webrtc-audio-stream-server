@@ -22,7 +22,9 @@ RUN npm install --production
 COPY . .
 
 # Expose ports
-EXPOSE 3000 1935 40000-49999/udp 40000-49999/tcp
+# 3000: HTTP/WebSocket (Railway sets PORT env var)
+# 40000-49999: WebRTC media (UDP/TCP)
+EXPOSE 3000 40000-49999/udp 40000-49999/tcp
 
 # Start the server
 CMD ["node", "server.js"]
