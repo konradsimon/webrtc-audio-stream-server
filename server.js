@@ -28,10 +28,15 @@ const whipProducers = new Map(); // Store WHIP producers by resource ID
 
 // Initialize Mediasoup
 async function createMediasoupWorker() {
+  // Get announced IP from environment (Railway provides this)
+  const announcedIp = process.env.ANNOUNCED_IP || null;
+  
   worker = await mediasoup.createWorker({
     logLevel: 'warn',
     rtcMinPort: 40000,
-    rtcMaxPort: 49999
+    rtcMaxPort: 49999,
+    // Railway-specific: Use environment variable for announced IP if available
+    ...(announcedIp && { announcedIp })
   });
 
   worker.on('died', () => {
@@ -93,8 +98,11 @@ app.post('/whip/:resourceId', async (req, res) => {
     console.log('[WHIP] Parsed SDP offer:', JSON.stringify(offer, null, 2));
     
     // Create WebRTC transport for WHIP
+    // Use environment variable for announced IP (Railway provides public IP)
+    const announcedIp = process.env.ANNOUNCED_IP || null;
+    
     const transport = await router.createWebRtcTransport({
-      listenIps: [{ ip: '0.0.0.0', announcedIp: null }],
+      listenIps: [{ ip: '0.0.0.0', announcedIp }],
       enableUdp: true,
       enableTcp: true,
       preferUdp: true
@@ -262,14 +270,17 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('createTransport', async ({ type }, callback) => {
-    try {
-      const transport = await router.createWebRtcTransport({
-        listenIps: [{ ip: '0.0.0.0', announcedIp: null }],
-        enableUdp: true,
-        enableTcp: true,
-        preferUdp: true
-      });
+      socket.on('createTransport', async ({ type }, callback) => {
+        try {
+          // Use environment variable for announced IP (Railway provides public IP)
+          const announcedIp = process.env.ANNOUNCED_IP || null;
+          
+          const transport = await router.createWebRtcTransport({
+            listenIps: [{ ip: '0.0.0.0', announcedIp }],
+            enableUdp: true,
+            enableTcp: true,
+            preferUdp: true
+          });
 
       transport.on('dtlsstatechange', (dtlsState) => {
         if (dtlsState === 'closed') {
